@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<title>Skipurr</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Skip back or ahead in any video by your own number of seconds. Arrow keys or A/D, Shift for a big jump.">
+<link rel="icon" type="image/png" href="icon.png">
+<style>
+/* Layout: one scrolling page of three full-screen "levels" (hero + playable demo, features, support), pink grid paper like the extension. */
+:root{
+  --paper:#fce4ec; --grid:#f6cddc; --panel:#fff3f8; --line:#ff80ab; --hot:#ff4081; --hot-ink:#ffffff;
+  --ink:#3a2a33; --muted:#7a6470; --coffee:#ffdd00; --coffee-edge:#e6c700; --coffee-ink:#1e1a10; --screen:#120c18;
+  --f-disp:'Press Start 2P', ui-monospace, monospace;
+  --f-body:'VT323', ui-monospace, monospace;
+  --body-size:24px; --body-lh:1.25; --h1:64px; --h2:26px; --h3:15px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#1b1220; --grid:#2a1b30; --panel:#261a2c; --line:#c14a82; --hot:#ff5c96; --hot-ink:#1b1220;
+  --ink:#f7e9f0; --muted:#c3abb9; --screen:#0b0710; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --paper:#1b1220; --grid:#2a1b30; --panel:#261a2c; --line:#c14a82; --hot:#ff5c96; --hot-ink:#1b1220;
+  --ink:#f7e9f0; --muted:#c3abb9; --screen:#0b0710; color-scheme:dark }
+
+/* language fonts: display + body per script (files are trimmed to each language's text) */
+@font-face{font-family:'Press Start 2P';src:url('fonts/PressStart2P.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'VT323';src:url('fonts/vt323.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Px zh-CN';src:url('fonts/site-zh_CN.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Px zh-TW';src:url('fonts/site-zh_TW.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Px ja';src:url('fonts/site-ja.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Px ko';src:url('fonts/site-ko.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Px ru';src:url('fonts/site-ru.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Px ar';src:url('fonts/site-ar.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Px hi';src:url('fonts/site-hi.woff2') format('woff2');font-display:swap}
+:root[data-script="vt"]{ --f-disp:'VT323', ui-monospace, monospace; --h1:84px; --h2:40px; --h3:28px }
+:root[data-script="zh-CN"]{ --f-disp:'Px zh-CN','Press Start 2P',sans-serif; --f-body:'Px zh-CN',sans-serif; --body-size:18px; --body-lh:1.6; --h2:30px; --h3:20px }
+:root[data-script="zh-TW"]{ --f-disp:'Px zh-TW','Press Start 2P',sans-serif; --f-body:'Px zh-TW',sans-serif; --body-size:18px; --body-lh:1.6; --h2:30px; --h3:20px }
+:root[data-script="ja"]{ --f-disp:'Px ja','Press Start 2P',sans-serif; --f-body:'Px ja',sans-serif; --body-size:18px; --body-lh:1.6; --h2:30px; --h3:20px }
+:root[data-script="ko"]{ --f-disp:'Px ko','Press Start 2P',sans-serif; --f-body:'Px ko',sans-serif; --body-size:18px; --body-lh:1.6; --h2:30px; --h3:20px }
+:root[data-script="ru"]{ --f-disp:'Px ru','Press Start 2P',sans-serif; --f-body:'Px ru',sans-serif; --body-size:18px; --body-lh:1.6; --h2:30px; --h3:20px }
+:root[data-script="ar"]{ --f-disp:'Px ar',sans-serif; --f-body:'Px ar',sans-serif; --body-size:24px; --body-lh:1.45; --h2:42px; --h3:28px }
+:root[data-script="hi"]{ --f-disp:'Px hi',sans-serif; --f-body:'Px hi',sans-serif; --body-size:19px; --body-lh:1.6; --h2:32px; --h3:21px }
+
+*{box-sizing:border-box}
+html{scroll-snap-type:y proximity;scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{animation:none!important;transition:none!important} }
+body{
+  margin:0; background:var(--paper); color:var(--ink); font-family:var(--f-body); font-size:var(--body-size); line-height:var(--body-lh);
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);
+  background-size:32px 32px; -webkit-font-smoothing:none;
+}
+a{color:var(--hot)}
+:focus-visible{outline:3px dashed var(--hot);outline-offset:3px}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.level{min-height:100svh;display:flex;align-items:center;scroll-snap-align:start;padding-block:96px 64px}
+.level > .wrap{width:100%}
+
+/* floating controls */
+.controls{position:fixed;z-index:20;top:calc(14px + env(safe-area-inset-top, 0px));right:calc(14px + env(safe-area-inset-right, 0px));display:flex;gap:10px;align-items:center}
+.pxbtn{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--hot);background:var(--panel);border:3px solid var(--line);box-shadow:3px 3px 0 var(--line);border-radius:7px;height:40px;padding:0 12px;cursor:pointer}
+.pxbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--line)}
+select.pxbtn{appearance:none;-webkit-appearance:none;padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--hot) 50%),linear-gradient(135deg,var(--hot) 50%,transparent 50%);background-position:calc(100% - 15px) 16px,calc(100% - 10px) 16px;background-size:5px 5px;background-repeat:no-repeat;font-family:var(--f-body);font-size:20px}
+:root[data-script] select.pxbtn{font-size:16px}
+.theme-ico{width:16px;height:16px;display:block;background:var(--hot);-webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat}
+.dots{position:fixed;z-index:20;right:calc(16px + env(safe-area-inset-right, 0px));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:12px}
+.dots a{width:12px;height:12px;background:var(--panel);border:2px solid var(--line);display:block}
+.dots a.on{background:var(--hot);border-color:var(--hot)}
+@media (max-width:700px){ .dots{display:none} }
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:48px;align-items:center}
+.brand{display:flex;flex-direction:column;gap:22px;min-width:0}
+.logo{width:120px;height:120px;image-rendering:pixelated;animation:bob 3s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.kicker{font-family:var(--f-disp);font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+:root[data-script] .kicker{font-size:calc(var(--h3) * .8);text-transform:none;letter-spacing:0}
+h1{margin:0;font-family:'Press Start 2P',monospace;font-size:var(--h1);line-height:1;color:var(--hot);text-shadow:5px 5px 0 var(--line);letter-spacing:-.02em}
+:root[data-script] h1{font-size:64px}
+.pitch{margin:0;max-width:30ch;font-size:calc(var(--body-size) * 1.12);color:var(--ink);text-wrap:pretty}
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.cta{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--f-disp);font-size:13px;color:var(--hot-ink);background:var(--hot);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);border-radius:9px;padding:16px 20px;transition:transform .08s}
+:root[data-script] .cta{font-size:calc(var(--h3) * .95)}
+.cta:hover{transform:translate(1px,1px);box-shadow:4px 4px 0 var(--line)}
+.cta:active{transform:translate(4px,4px);box-shadow:1px 1px 0 var(--line)}
+.cta img{width:22px;height:22px;image-rendering:pixelated}
+.note{font-size:calc(var(--body-size) * .85);color:var(--muted)}
+
+/* demo player */
+.demo{display:flex;flex-direction:column;gap:14px;min-width:0}
+.demo h2{margin:0;font-family:var(--f-disp);font-size:14px;color:var(--hot)}
+:root[data-script] .demo h2{font-size:var(--h3)}
+.tv{position:relative;border:5px solid var(--line);box-shadow:9px 9px 0 var(--hot);border-radius:8px;background:var(--screen);overflow:hidden;aspect-ratio:16/9;max-width:100%}
+.tv canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+.osd{position:absolute;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:.5em;font-family:'Press Start 2P',monospace;font-size:clamp(14px,2.2vw,22px);color:#fff;text-shadow:0 .08em .2em rgba(0,0,0,.85),0 0 .5em rgba(0,0,0,.6);opacity:0;transition:opacity .18s;pointer-events:none;direction:ltr}
+.osd.on{opacity:1}
+.osd.l{left:9%}.osd.r{right:9%;flex-direction:row-reverse}
+.osd i{width:1.125em;height:1.125em;background:#fff;display:block;-webkit-mask:var(--arr) center/contain no-repeat;mask:var(--arr) center/contain no-repeat}
+.osd.l i{transform:scaleX(-1)}
+.bar{position:absolute;left:0;right:0;bottom:0;height:6px;background:rgba(255,255,255,.18)}
+.bar b{display:block;height:100%;background:var(--hot);width:0}
+.time{position:absolute;right:10px;bottom:12px;font-family:'Press Start 2P',monospace;font-size:10px;color:#fff;background:rgba(0,0,0,.55);padding:4px 6px;direction:ltr;font-variant-numeric:tabular-nums}
+.keys{display:flex;flex-wrap:wrap;gap:10px;direction:ltr}
+.key{font-family:'Press Start 2P',monospace;font-size:14px;min-width:52px;height:52px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;color:var(--hot);background:var(--panel);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);border-radius:8px;cursor:pointer;user-select:none;touch-action:manipulation}
+.key.down,.key:active{background:var(--hot);color:var(--hot-ink);transform:translate(3px,3px);box-shadow:1px 1px 0 var(--line)}
+.key.wide{min-width:96px}
+.key i{width:16px;height:16px;background:currentColor;display:block;-webkit-mask:var(--arr) center/contain no-repeat;mask:var(--arr) center/contain no-repeat}
+.key.l i{transform:scaleX(-1)}
+.hint{margin:0;color:var(--muted);font-size:calc(var(--body-size) * .9);max-width:48ch}
+
+/* features */
+h2.sec{margin:0 0 40px;font-family:var(--f-disp);font-size:var(--h2);color:var(--hot);text-shadow:3px 3px 0 var(--line);text-wrap:balance}
+:root:not([data-script]) h2.sec{font-size:26px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+.card{background:var(--panel);border:3px solid var(--line);box-shadow:6px 6px 0 var(--line);border-radius:10px;padding:26px 24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card h3{margin:0;font-family:var(--f-disp);font-size:var(--h3);line-height:1.5;color:var(--hot);text-wrap:balance}
+:root:not([data-script]) .card h3{font-size:14px}
+.card p{margin:0;color:var(--ink);text-wrap:pretty}
+.glyph{display:flex;gap:6px;direction:ltr}
+.glyph span{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--hot);border:2px solid var(--line);background:var(--paper);border-radius:5px;min-width:30px;height:30px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center}
+.glyph span i{width:12px;height:12px;background:currentColor;-webkit-mask:var(--arr) center/contain no-repeat;mask:var(--arr) center/contain no-repeat}
+.glyph span i.l{transform:scaleX(-1)}
+.screens b{display:block;border:2px solid currentColor}.screens .s1{width:10px;height:7px}.screens .s2{width:16px;height:10px}.screens .s3{width:20px;height:14px;background:currentColor}
+
+/* support */
+.support{background:var(--panel);border:4px solid var(--line);box-shadow:9px 9px 0 var(--hot);border-radius:12px;padding:40px clamp(20px,5vw,56px);display:grid;grid-template-columns:auto minmax(0,1fr);gap:36px;align-items:center}
+.support img{width:128px;height:128px;image-rendering:pixelated}
+.support h2.sec{margin-bottom:14px}
+.support p{margin:0 0 24px;max-width:52ch}
+.btns{display:flex;flex-wrap:wrap;gap:14px}
+.coffee{background:var(--coffee);color:var(--coffee-ink);border-color:var(--coffee-edge);box-shadow:5px 5px 0 var(--coffee-edge)}
+.coffee:hover{box-shadow:4px 4px 0 var(--coffee-edge)}
+.ghost{background:var(--panel);color:var(--hot)}
+footer{padding-block:28px 40px;color:var(--muted);font-size:calc(var(--body-size) * .85)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between}
+footer nav{display:flex;flex-wrap:wrap;gap:12px 22px}
+
+@media (max-width:900px){
+  .hero{grid-template-columns:minmax(0,1fr);gap:40px}
+  .cards{grid-template-columns:minmax(0,1fr)}
+  .level{min-height:auto;padding-block:88px 48px}
+  h1{font-size:44px} :root[data-script] h1{font-size:44px}
+  .support{grid-template-columns:minmax(0,1fr)}
+  .support img{width:88px;height:88px}
+}
+@media (max-width:420px){ h1{font-size:34px} :root[data-script] h1{font-size:34px} .cta{padding:14px 16px} .controls{gap:6px} }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <label for="lang" class="vh" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)" data-t="langLabel">Language</label>
+  <select id="lang" class="pxbtn" data-t-aria="langLabel" aria-label="Language"></select>
+  <button id="theme" class="pxbtn" type="button" data-t-aria="themeLabel" aria-label="Switch light / dark"><span class="theme-ico"></span></button>
+</div>
+<nav class="dots" aria-hidden="true"><a href="#top" data-sec="top"></a><a href="#features" data-sec="features"></a><a href="#support" data-sec="support"></a></nav>
+
+<main>
+  <section class="level" id="top">
+    <div class="wrap hero">
+      <div class="brand">
+        <img class="logo" src="icon.png" width="120" height="120" alt="Skipurr cat icon">
+        <div class="kicker" data-t="kicker">Free Chrome extension</div>
+        <h1>SKIPURR</h1>
+        <p class="pitch" data-t="pitch">Skip back or ahead in any video by your own number of seconds. Arrow keys or A/D, Shift for a big jump.</p>
+        <div class="cta-row">
+          <a class="cta" id="store" href="https://chromewebstore.google.com/detail/video-rewind-fast-forward/ghdgdlcndnckaifbminohkohgahahgoa" target="_blank" rel="noopener"><img src="icon.png" alt=""><span data-t="ctaAdd">Add to Chrome</span></a>
+          <span class="note" data-t="ctaNote">Free · no sign-up · no tracking</span>
+        </div>
+      </div>
+      <div class="demo">
+        <h2 data-t="demoTitle">Try it right here</h2>
+        <div class="tv" id="tv" dir="ltr">
+          <canvas id="scene" width="160" height="90" aria-label="Demo video"></canvas>
+          <div class="osd l" id="osdL"><i></i><span></span></div>
+          <div class="osd r" id="osdR"><i></i><span></span></div>
+          <div class="time" id="time">0:00 / 10:00</div>
+          <div class="bar"><b id="prog"></b></div>
+        </div>
+        <div class="keys" role="group" aria-label="Demo keys">
+          <button class="key l" type="button" data-dir="-1" aria-label="Rewind"><i></i></button>
+          <button class="key" type="button" data-dir="1" aria-label="Skip ahead"><i></i></button>
+          <button class="key" type="button" data-dir="-1">A</button>
+          <button class="key" type="button" data-dir="1">D</button>
+          <button class="key wide" type="button" id="shiftKey" aria-pressed="false">Shift</button>
+        </div>
+        <p class="hint" data-t="demoHint">Press → or D to skip ahead, ← or A to rewind. Hold Shift for a big jump.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="level" id="features">
+    <div class="wrap">
+      <h2 class="sec" data-t="featuresTitle">What it does</h2>
+      <div class="cards">
+        <article class="card">
+          <div class="glyph"><span><i class="l"></i></span><span><i></i></span><span>A</span><span>D</span></div>
+          <h3 data-t="f1t">Your keys, your seconds</h3>
+          <p data-t="f1d"></p>
+        </article>
+        <article class="card">
+          <div class="glyph"><span>+10</span><span>+20</span><span>+30</span></div>
+          <h3 data-t="f2t">Taps add up</h3>
+          <p data-t="f2d"></p>
+        </article>
+        <article class="card">
+          <div class="glyph screens" aria-hidden="true"><span><b class="s1"></b></span><span><b class="s2"></b></span><span><b class="s3"></b></span></div>
+          <h3 data-t="f3t">Works where you watch</h3>
+          <p data-t="f3d"></p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="level" id="support">
+    <div class="wrap">
+      <div class="support">
+        <img src="icon.png" alt="">
+        <div>
+          <h2 class="sec" data-t="supportTitle">Support Skipurr</h2>
+          <p data-t="supportDesc"></p>
+          <div class="btns">
+            <a class="cta ghost" id="review" href="https://chromewebstore.google.com/detail/video-rewind-fast-forward/ghdgdlcndnckaifbminohkohgahahgoa/reviews" target="_blank" rel="noopener"><span data-t="rateBtn">Leave a review</span></a>
+            <a class="cta coffee" href="https://buymeacoffee.com/kaikimax" target="_blank" rel="noopener">☕ <span data-t="coffee">Buy me a coffee</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>
+  <div class="wrap">
+    <span data-t="footer">Made with pixels and patience.</span>
+    <nav><a href="privacy.html" data-t="privacyLink">Privacy policy</a><a href="https://chromewebstore.google.com/detail/video-rewind-fast-forward/ghdgdlcndnckaifbminohkohgahahgoa" target="_blank" rel="noopener">Chrome Web Store</a></nav>
+  </div>
+</footer>
+
+<script>
+const T = {"en": {"metaTitle": "Skipurr: Video Rewind & Fast-Forward for Chrome", "kicker": "Free Chrome extension", "ctaAdd": "Add to Chrome", "ctaNote": "Free · no sign-up · no tracking", "demoTitle": "Try it right here", "demoHint": "Press → or D to skip ahead, ← or A to rewind. Hold Shift for a big jump.", "demoTap": "On a phone? Tap the keys.", "featuresTitle": "What it does", "f1t": "Your keys, your seconds", "f1d": "→ / D skips ahead, ← / A rewinds, Shift jumps further. Pick any time from 1 second to 1 hour.", "f2t": "Taps add up", "f2d": "Press again and again: +10, +20, +30… The video jumps once, so nothing reloads in between.", "f3t": "Works where you watch", "f3d": "YouTube, course sites, news players, embedded videos, theater mode, mini players and fullscreen.", "supportTitle": "Support Skipurr", "supportDesc": "Skipurr is free, with no ads and no tracking. If it saves you time, a review or a coffee keeps it going.", "rateBtn": "Leave a review", "privacyLink": "Privacy policy", "langLabel": "Language", "themeLabel": "Switch light / dark", "footer": "Made with pixels and patience.", "pitch": "Skip back or ahead in any video by your own number of seconds. Arrow keys or A/D, Shift for a big jump.", "coffee": "Buy me a coffee"}, "fr": {"metaTitle": "Skipurr : avancer et reculer dans une vidéo sur Chrome", "kicker": "Extension Chrome gratuite", "ctaAdd": "Ajouter à Chrome", "ctaNote": "Gratuit · sans inscription · sans pistage", "demoTitle": "Essayez ici même", "demoHint": "Appuyez sur → ou D pour avancer, ← ou A pour reculer. Maintenez Shift pour un grand saut.", "demoTap": "Sur mobile ? Appuyez sur les touches.", "featuresTitle": "Ce qu’elle fait", "f1t": "Vos touches, vos secondes", "f1d": "→ / D pour avancer, ← / A pour reculer, Shift pour sauter plus loin. Choisissez entre 1 seconde et 1 heure.", "f2t": "Les appuis s’additionnent", "f2d": "Appuyez encore et encore : +10, +20, +30… La vidéo saute une seule fois, sans rechargement entre-temps.", "f3t": "Partout où vous regardez", "f3d": "YouTube, sites de cours, lecteurs d’actualités, vidéos intégrées, mode cinéma, mini-lecteur et plein écran.", "supportTitle": "Soutenir Skipurr", "supportDesc": "Skipurr est gratuit, sans pub ni pistage. S’il vous fait gagner du temps, un avis ou un café l’aide à continuer.", "rateBtn": "Laisser un avis", "privacyLink": "Politique de confidentialité", "langLabel": "Langue", "themeLabel": "Mode clair / sombre", "footer": "Fait avec des pixels et de la patience.", "pitch": "Avancez ou reculez dans n’importe quelle vidéo du nombre de secondes de votre choix. Flèches ou A/D, Shift pour un grand saut.", "coffee": "Offrez-moi un café"}, "es": {"metaTitle": "Skipurr: retrocede y adelanta videos en Chrome", "kicker": "Extensión gratis para Chrome", "ctaAdd": "Agregar a Chrome", "ctaNote": "Gratis · sin registro · sin rastreo", "demoTitle": "Pruébalo aquí mismo", "demoHint": "Presiona → o D para adelantar, ← o A para retroceder. Mantén Shift para un salto largo.", "demoTap": "¿En el celular? Toca las teclas.", "featuresTitle": "Qué hace", "f1t": "Tus teclas, tus segundos", "f1d": "→ / D adelanta, ← / A retrocede y Shift salta más lejos. Elige desde 1 segundo hasta 1 hora.", "f2t": "Los toques se suman", "f2d": "Presiona una y otra vez: +10, +20, +30… El video salta una sola vez, sin recargas de por medio.", "f3t": "Funciona donde mires", "f3d": "YouTube, sitios de cursos, reproductores de noticias, videos insertados, modo cine, minirreproductor y pantalla completa.", "supportTitle": "Apoya a Skipurr", "supportDesc": "Skipurr es gratis, sin anuncios ni rastreo. Si te ahorra tiempo, una reseña o un café lo mantienen vivo.", "rateBtn": "Deja una reseña", "privacyLink": "Política de privacidad", "langLabel": "Idioma", "themeLabel": "Modo claro / oscuro", "footer": "Hecho con píxeles y paciencia.", "pitch": "Retrocede o adelanta cualquier video los segundos que tú elijas. Flechas o A/D, y con Shift, un salto largo.", "coffee": "Invítame a un café"}, "pt_BR": {"metaTitle": "Skipurr: voltar e avançar vídeos no Chrome", "kicker": "Extensão grátis para Chrome", "ctaAdd": "Usar no Chrome", "ctaNote": "Grátis · sem cadastro · sem rastreamento", "demoTitle": "Teste aqui mesmo", "demoHint": "Aperte → ou D para avançar, ← ou A para voltar. Segure Shift para um pulo grande.", "demoTap": "No celular? Toque nas teclas.", "featuresTitle": "O que ele faz", "f1t": "Suas teclas, seus segundos", "f1d": "→ / D avança, ← / A volta e Shift pula mais longe. Escolha de 1 segundo a 1 hora.", "f2t": "Os toques se somam", "f2d": "Aperte várias vezes: +10, +20, +30… O vídeo pula uma vez só, sem recarregar no meio.", "f3t": "Funciona onde você assiste", "f3d": "YouTube, sites de cursos, players de notícias, vídeos incorporados, modo teatro, miniplayer e tela cheia.", "supportTitle": "Apoie o Skipurr", "supportDesc": "O Skipurr é grátis, sem anúncios e sem rastreamento. Se ele economiza seu tempo, uma avaliação ou um café ajuda a manter o projeto.", "rateBtn": "Deixar uma avaliação", "privacyLink": "Política de privacidade", "langLabel": "Idioma", "themeLabel": "Modo claro / escuro", "footer": "Feito com pixels e paciência.", "pitch": "Volte ou avance qualquer vídeo quantos segundos você quiser. Use as setas ou A/D, e Shift para um pulo grande.", "coffee": "Me pague um café"}, "de": {"metaTitle": "Skipurr: Videos vor- und zurückspulen in Chrome", "kicker": "Kostenlose Chrome-Erweiterung", "ctaAdd": "Zu Chrome hinzufügen", "ctaNote": "Kostenlos · ohne Anmeldung · ohne Tracking", "demoTitle": "Probier’s direkt hier", "demoHint": "Drück → oder D zum Vorspulen, ← oder A zum Zurückspulen. Mit Shift gibt’s einen großen Sprung.", "demoTap": "Am Handy? Tipp auf die Tasten.", "featuresTitle": "Was Skipurr kann", "f1t": "Deine Tasten, deine Sekunden", "f1d": "→ / D spult vor, ← / A zurück, Shift springt weiter. Wähl beliebig zwischen 1 Sekunde und 1 Stunde.", "f2t": "Mehrfach drücken, ein Sprung", "f2d": "Drück einfach mehrmals: +10, +20, +30 … Das Video springt nur einmal, also lädt nichts zwischendurch neu.", "f3t": "Läuft, wo du schaust", "f3d": "YouTube, Lernplattformen, News-Player, eingebettete Videos, Kinomodus, Miniplayer und Vollbild.", "supportTitle": "Skipurr unterstützen", "supportDesc": "Skipurr ist kostenlos, ohne Werbung und ohne Tracking. Spart es dir Zeit, halten eine Bewertung oder ein Kaffee es am Laufen.", "rateBtn": "Bewertung schreiben", "privacyLink": "Datenschutzerklärung", "langLabel": "Sprache", "themeLabel": "Hell / Dunkel wechseln", "footer": "Gemacht mit Pixeln und Geduld.", "pitch": "Spul jedes Video genau so viele Sekunden vor oder zurück, wie du willst. Pfeiltasten oder A/D, mit Shift ein großer Sprung.", "coffee": "Kaffee spendieren"}, "it": {"metaTitle": "Skipurr: avanti e indietro nei video su Chrome", "kicker": "Estensione gratuita per Chrome", "ctaAdd": "Aggiungi a Chrome", "ctaNote": "Gratis · senza account · senza tracciamento", "demoTitle": "Provalo qui", "demoHint": "Premi → o D per andare avanti, ← o A per tornare indietro. Tieni premuto Shift per un salto lungo.", "demoTap": "Sei sul telefono? Tocca i tasti.", "featuresTitle": "Cosa fa", "f1t": "I tuoi tasti, i tuoi secondi", "f1d": "→ / D va avanti, ← / A torna indietro, Shift salta più lontano. Scegli da 1 secondo a 1 ora.", "f2t": "I tocchi si sommano", "f2d": "Premi più volte: +10, +20, +30… Il video salta una volta sola, senza ricaricare nel frattempo.", "f3t": "Funziona dove guardi", "f3d": "YouTube, siti di corsi, player di notizie, video incorporati, modalità cinema, miniplayer e schermo intero.", "supportTitle": "Sostieni Skipurr", "supportDesc": "Skipurr è gratis, senza pubblicità né tracciamento. Se ti fa risparmiare tempo, una recensione o un caffè lo aiutano ad andare avanti.", "rateBtn": "Lascia una recensione", "privacyLink": "Informativa sulla privacy", "langLabel": "Lingua", "themeLabel": "Tema chiaro / scuro", "footer": "Fatto con pixel e pazienza.", "pitch": "Vai avanti o indietro in qualsiasi video di quanti secondi vuoi. Frecce o A/D, con Shift fai un salto lungo.", "coffee": "Offrimi un caffè"}, "nl": {"metaTitle": "Skipurr: video’s terug- en vooruitspoelen in Chrome", "kicker": "Gratis Chrome-extensie", "ctaAdd": "Toevoegen aan Chrome", "ctaNote": "Gratis · geen account · geen tracking", "demoTitle": "Probeer het hier", "demoHint": "→ of D spoelt vooruit, ← of A terug. Houd Shift in voor een grote sprong.", "demoTap": "Op je telefoon? Tik op de toetsen.", "featuresTitle": "Wat het doet", "f1t": "Jouw toetsen, jouw seconden", "f1d": "→ / D spoelt vooruit, ← / A terug, Shift springt verder. Kies van 1 seconde tot 1 uur.", "f2t": "Elke tik telt mee", "f2d": "Druk een paar keer: +10, +20, +30… De video springt maar één keer, dus er laadt niets tussendoor opnieuw.", "f3t": "Werkt waar jij kijkt", "f3d": "YouTube, cursussites, nieuwsspelers, ingesloten video’s, theatermodus, minispeler en volledig scherm.", "supportTitle": "Steun Skipurr", "supportDesc": "Skipurr is gratis, zonder advertenties en zonder tracking. Bespaart het je tijd? Een review of een kop koffie houdt het draaiende.", "rateBtn": "Schrijf een review", "privacyLink": "Privacybeleid", "langLabel": "Taal", "themeLabel": "Licht / donker wisselen", "footer": "Gemaakt met pixels en geduld.", "pitch": "Spoel elke video terug of vooruit met precies het aantal seconden dat jij kiest. Pijltjestoetsen of A/D, met Shift een grote sprong.", "coffee": "Trakteer me op koffie"}, "sv": {"metaTitle": "Skipurr: Spola video bakåt och framåt i Chrome", "kicker": "Gratis Chrome-tillägg", "ctaAdd": "Lägg till i Chrome", "ctaNote": "Gratis · inget konto · ingen spårning", "demoTitle": "Testa direkt här", "demoHint": "→ eller D spolar framåt, ← eller A bakåt. Håll in Shift för ett långt hopp.", "demoTap": "På mobilen? Tryck på tangenterna.", "featuresTitle": "Det här gör den", "f1t": "Dina tangenter, din tid", "f1d": "→ / D spolar framåt, ← / A bakåt, Shift hoppar längre. Välj från 1 sekund till 1 timme.", "f2t": "Trycken läggs ihop", "f2d": "Tryck flera gånger: +10, +20, +30 … Videon hoppar bara en gång, så inget laddas om på vägen.", "f3t": "Funkar där du tittar", "f3d": "YouTube, kurssajter, nyhetsspelare, inbäddade videor, bioläge, minispelare och helskärm.", "supportTitle": "Stöd Skipurr", "supportDesc": "Skipurr är gratis, utan reklam och utan spårning. Sparar den tid åt dig? En recension eller en kaffe håller den igång.", "rateBtn": "Skriv en recension", "privacyLink": "Integritetspolicy", "langLabel": "Språk", "themeLabel": "Växla ljust / mörkt", "footer": "Gjord med pixlar och tålamod.", "pitch": "Spola vilken video som helst bakåt eller framåt, så många sekunder du vill. Piltangenter eller A/D, Shift för långt hopp.", "coffee": "Bjud mig på en kaffe"}, "no": {"metaTitle": "Skipurr: Spol video frem og tilbake i Chrome", "kicker": "Gratis Chrome-utvidelse", "ctaAdd": "Legg til i Chrome", "ctaNote": "Gratis · ingen konto · ingen sporing", "demoTitle": "Prøv det her", "demoHint": "→ eller D spoler frem, ← eller A tilbake. Hold inne Shift for et stort hopp.", "demoTap": "På mobilen? Trykk på tastene.", "featuresTitle": "Dette gjør den", "f1t": "Dine taster, dine sekunder", "f1d": "→ / D spoler frem, ← / A tilbake, Shift hopper lenger. Velg fra 1 sekund til 1 time.", "f2t": "Trykkene legges sammen", "f2d": "Trykk flere ganger: +10, +20, +30 … Videoen hopper bare én gang, så ingenting lastes inn på nytt underveis.", "f3t": "Virker der du ser på", "f3d": "YouTube, kursnettsteder, nyhetsavspillere, innebygde videoer, kinomodus, minispiller og fullskjerm.", "supportTitle": "Støtt Skipurr", "supportDesc": "Skipurr er gratis, uten reklame og uten sporing. Sparer den deg tid? En vurdering eller en kaffe holder den i gang.", "rateBtn": "Skriv en vurdering", "privacyLink": "Personvernerklæring", "langLabel": "Språk", "themeLabel": "Bytt lyst / mørkt", "footer": "Laget med piksler og tålmodighet.", "pitch": "Spol frem eller tilbake i alle videoer med så mange sekunder du vil. Piltaster eller A/D, og Shift for et stort hopp.", "coffee": "Spander en kaffe"}, "da": {"metaTitle": "Skipurr: Spol frem og tilbage i videoer i Chrome", "kicker": "Gratis Chrome-udvidelse", "ctaAdd": "Føj til Chrome", "ctaNote": "Gratis · ingen konto · ingen sporing", "demoTitle": "Prøv det lige her", "demoHint": "→ eller D spoler frem, ← eller A tilbage. Hold Shift nede for et stort spring.", "demoTap": "På mobilen? Tryk på tasterne.", "featuresTitle": "Det kan den", "f1t": "Dine taster, dine sekunder", "f1d": "→ / D spoler frem, ← / A tilbage, Shift springer længere. Vælg mellem 1 sekund og 1 time.", "f2t": "Tryk lægges sammen", "f2d": "Tryk flere gange: +10, +20, +30 … Videoen springer kun én gang, så intet genindlæses undervejs.", "f3t": "Virker, hvor du ser", "f3d": "YouTube, kursussider, nyhedsafspillere, indlejrede videoer, biograftilstand, miniafspiller og fuld skærm.", "supportTitle": "Støt Skipurr", "supportDesc": "Skipurr er gratis, uden reklamer og uden sporing. Sparer den dig tid? En anmeldelse eller en kaffe holder den kørende.", "rateBtn": "Skriv en anmeldelse", "privacyLink": "Privatlivspolitik", "langLabel": "Sprog", "themeLabel": "Skift lys / mørk", "footer": "Lavet med pixels og tålmodighed.", "pitch": "Spol frem eller tilbage i enhver video med præcis det antal sekunder, du vælger. Piletaster eller A/D, Shift for stort spring.", "coffee": "Spendér en kaffe"}, "pl": {"metaTitle": "Skipurr: przewijanie wideo w przód i w tył w Chrome", "kicker": "Darmowe rozszerzenie do Chrome", "ctaAdd": "Dodaj do Chrome", "ctaNote": "Za darmo · bez rejestracji · bez śledzenia", "demoTitle": "Wypróbuj tutaj", "demoHint": "Naciśnij → lub D, by przewinąć w przód, ← lub A – w tył. Przytrzymaj Shift, by zrobić duży skok.", "demoTap": "Na telefonie? Stuknij w klawisze.", "featuresTitle": "Co potrafi Skipurr", "f1t": "Twoje klawisze, twój czas", "f1d": "→ / D przewija w przód, ← / A w tył, a Shift skacze dalej. Ustaw dowolny czas od 1 sekundy do 1 godziny.", "f2t": "Naciśnięcia się sumują", "f2d": "Naciskaj raz za razem: +10, +20, +30… Film przeskakuje tylko raz, więc nic się po drodze nie doładowuje.", "f3t": "Działa tam, gdzie oglądasz", "f3d": "YouTube, platformy z kursami, odtwarzacze w serwisach informacyjnych, osadzone filmy, tryb kinowy, miniodtwarzacz i pełny ekran.", "supportTitle": "Wesprzyj Skipurr", "supportDesc": "Skipurr jest darmowy, bez reklam i śledzenia. Jeśli oszczędza ci czas, opinia albo kawa pomogą mu działać dalej.", "rateBtn": "Wystaw opinię", "privacyLink": "Polityka prywatności", "langLabel": "Język", "themeLabel": "Tryb jasny / ciemny", "footer": "Zrobione z pikseli i cierpliwości.", "pitch": "Przewijaj dowolny film w przód lub w tył o wybraną liczbę sekund. Strzałki lub A/D, a z Shiftem – duży skok.", "coffee": "Postaw mi kawę"}, "tr": {"metaTitle": "Skipurr: Chrome için video ileri ve geri sarma", "kicker": "Ücretsiz Chrome uzantısı", "ctaAdd": "Chrome'a ekle", "ctaNote": "Ücretsiz · üyelik yok · takip yok", "demoTitle": "Hemen burada dene", "demoHint": "İleri sarmak için → ya da D'ye, geri sarmak için ← ya da A'ya bas. Büyük atlama için Shift'i basılı tut.", "demoTap": "Telefonda mısın? Tuşlara dokun.", "featuresTitle": "Neler yapar?", "f1t": "Senin tuşların, senin süren", "f1d": "→ / D ileri sarar, ← / A geri sarar, Shift daha uzağa atlar. 1 saniyeden 1 saate kadar istediğin süreyi seç.", "f2t": "Basışlar toplanır", "f2d": "Art arda bas: +10, +20, +30… Video tek seferde atlar, arada hiçbir şey yeniden yüklenmez.", "f3t": "İzlediğin her yerde", "f3d": "YouTube, eğitim siteleri, haber oynatıcıları, yerleşik videolar, sinema modu, mini oynatıcı ve tam ekran.", "supportTitle": "Skipurr'a destek ol", "supportDesc": "Skipurr ücretsiz; reklam yok, takip yok. Sana zaman kazandırıyorsa bir yorum ya da bir kahveyle destek olabilirsin.", "rateBtn": "Yorum yap", "privacyLink": "Gizlilik politikası", "langLabel": "Dil", "themeLabel": "Açık / koyu tema", "footer": "Pikseller ve sabırla yapıldı.", "pitch": "Her videoyu istediğin kadar saniye ileri ya da geri sar. Ok tuşları veya A/D, büyük atlama için Shift.", "coffee": "Bir kahve ısmarla"}, "ru": {"metaTitle": "Skipurr: перемотка видео назад и вперёд в Chrome", "kicker": "Бесплатное расширение для Chrome", "ctaAdd": "Установить", "ctaNote": "Бесплатно · без регистрации · без слежки", "demoTitle": "Попробуйте прямо здесь", "demoHint": "→ или D — вперёд, ← или A — назад. Удерживайте Shift для большого шага.", "demoTap": "С телефона? Нажимайте на клавиши.", "featuresTitle": "Что умеет Skipurr", "f1t": "Ваши клавиши, ваши секунды", "f1d": "→ / D — вперёд, ← / A — назад, с Shift — большой шаг. Любой шаг от 1 секунды до 1 часа.", "f2t": "Нажатия складываются", "f2d": "Жмите снова и снова: +10, +20, +30… Видео перематывается один раз, без лишних подгрузок.", "f3t": "Везде, где вы смотрите", "f3d": "YouTube, сайты с курсами, плееры новостных сайтов, встроенные видео, широкоэкранный режим, мини-проигрыватель и полный экран.", "supportTitle": "Поддержать Skipurr", "supportDesc": "Skipurr бесплатный, без рекламы и слежки. Если он экономит вам время, оставьте отзыв или угостите кофе.", "rateBtn": "Оставить отзыв", "privacyLink": "Политика конфиденциальности", "langLabel": "Язык", "themeLabel": "Светлая / тёмная тема", "footer": "Сделано из пикселей и терпения.", "pitch": "Перематывайте любое видео назад или вперёд на выбранное число секунд. Стрелки или A/D, с Shift — шаг больше.", "coffee": "Угостить кофе"}, "vi": {"metaTitle": "Skipurr: Tua lại & tua nhanh video trên Chrome", "kicker": "Tiện ích Chrome miễn phí", "ctaAdd": "Thêm vào Chrome", "ctaNote": "Miễn phí · không đăng ký · không theo dõi", "demoTitle": "Thử ngay tại đây", "demoHint": "Nhấn → hoặc D để tua nhanh, ← hoặc A để tua lại. Giữ Shift để tua xa hơn.", "demoTap": "Dùng điện thoại? Chạm vào phím nhé.", "featuresTitle": "Skipurr làm được gì", "f1t": "Số giây do bạn chọn", "f1d": "→ / D tua nhanh, ← / A tua lại, Shift tua xa hơn. Chọn bao nhiêu tùy bạn, từ 1 giây đến 1 giờ.", "f2t": "Nhấn nhiều, cộng dồn", "f2d": "Nhấn liên tục: +10, +20, +30… Video chỉ tua một lần nên không bị tải lại giữa chừng.", "f3t": "Xem ở đâu cũng dùng được", "f3d": "YouTube, trang học trực tuyến, trình phát báo điện tử, video nhúng, chế độ rạp chiếu phim, trình phát thu nhỏ và toàn màn hình.", "supportTitle": "Ủng hộ Skipurr", "supportDesc": "Skipurr miễn phí, không quảng cáo, không theo dõi. Thấy tiện thì để lại đánh giá hoặc mời mình ly cà phê nhé!", "rateBtn": "Viết đánh giá", "privacyLink": "Chính sách quyền riêng tư", "langLabel": "Ngôn ngữ", "themeLabel": "Chuyển sáng / tối", "footer": "Làm từ pixel và sự kiên nhẫn.", "pitch": "Tua lại hoặc tua nhanh mọi video theo số giây bạn chọn. Dùng phím mũi tên hoặc A/D, giữ Shift để tua xa hơn.", "coffee": "Mời mình một ly cà phê"}, "ar": {"metaTitle": "Skipurr: ترجيع وتقديم الفيديو في Chrome", "kicker": "إضافة Chrome مجانية", "ctaAdd": "إضافة إلى Chrome", "ctaNote": "مجانية · بدون تسجيل · بدون تتبّع", "demoTitle": "جرّبها الحين هني", "demoHint": "اضغط → أو D للتقديم، و← أو A للترجيع. ومع Shift القفزة تصير كبيرة.", "demoTap": "من الجوال؟ اضغط على الأزرار.", "featuresTitle": "وش تسوي الإضافة؟", "f1t": "أزرارك وثوانيك على كيفك", "f1d": "→ / D للتقديم، ← / A للترجيع، وShift لقفزة أبعد. اختر أي وقت من ثانية وحدة لين ساعة كاملة.", "f2t": "الضغطات تنجمع", "f2d": "اضغط ورا بعض: +10، +20، +30… والفيديو يقفز مرة وحدة، فما يعيد التحميل بالنص.", "f3t": "تشتغل وين ما تشوف", "f3d": "YouTube، مواقع الدورات، مشغلات الأخبار، الفيديوهات المضمّنة، وضع المسرح، المشغل المصغّر والشاشة الكاملة.", "supportTitle": "ادعم Skipurr", "supportDesc": "Skipurr مجانية، بدون إعلانات ولا تتبّع. إذا وفّرت عليك وقت، تقييمك أو قهوة منك تخليها مستمرة.", "rateBtn": "اكتب تقييمك", "privacyLink": "سياسة الخصوصية", "langLabel": "اللغة", "themeLabel": "فاتح / داكن", "footer": "مسوّاة بالبكسل والصبر.", "pitch": "رجّع أو قدّم أي فيديو بعدد الثواني اللي تبيه. الأسهم أو A/D، ومع Shift قفزة كبيرة.", "coffee": "اعزمني على قهوة"}, "hi": {"metaTitle": "Skipurr: Chrome में वीडियो आगे-पीछे करें", "kicker": "मुफ़्त Chrome एक्सटेंशन", "ctaAdd": "Chrome में जोड़ें", "ctaNote": "मुफ़्त · साइन-अप नहीं · ट्रैकिंग नहीं", "demoTitle": "यहीं आज़माकर देखें", "demoHint": "आगे के लिए → या D, पीछे के लिए ← या A दबाएँ। बड़ी छलांग के लिए Shift दबाकर रखें।", "demoTap": "फ़ोन पर हैं? बटन पर टैप करें।", "featuresTitle": "यह क्या करता है", "f1t": "आपके बटन, आपके सेकंड", "f1d": "→ / D से आगे, ← / A से पीछे, Shift से बड़ी छलांग। 1 सेकंड से 1 घंटे तक कोई भी समय चुनें।", "f2t": "टैप जुड़ते जाते हैं", "f2d": "बार-बार दबाएँ: +10, +20, +30… वीडियो एक ही बार में छलांग लगाता है, बीच में कुछ रीलोड नहीं होता।", "f3t": "जहाँ देखें, वहीं चले", "f3d": "YouTube, कोर्स वाली साइटें, न्यूज़ प्लेयर, एम्बेड किए गए वीडियो, थिएटर मोड, मिनी प्लेयर और फ़ुलस्क्रीन।", "supportTitle": "Skipurr का साथ दें", "supportDesc": "Skipurr मुफ़्त है, न विज्ञापन, न ट्रैकिंग। अगर इससे आपका समय बचता है, तो एक रिव्यू या एक कॉफ़ी इसे चलाए रखेगी।", "rateBtn": "रिव्यू लिखें", "privacyLink": "प्राइवेसी पॉलिसी", "langLabel": "भाषा", "themeLabel": "लाइट / डार्क मोड", "footer": "पिक्सल और धैर्य से बनाया गया।", "pitch": "किसी भी वीडियो को जितने चाहें उतने सेकंड आगे या पीछे करें। ऐरो बटन या A/D दबाएँ, बड़ी छलांग के लिए Shift।", "coffee": "एक कॉफ़ी पिलाइए"}, "zh_CN": {"metaTitle": "Skipurr：视频快进快退 Chrome 扩展程序", "kicker": "免费 Chrome 扩展程序", "ctaAdd": "添加至 Chrome", "ctaNote": "免费 · 无需注册 · 不追踪", "demoTitle": "就在这里试试", "demoHint": "按 → 或 D 快进，按 ← 或 A 快退。按住 Shift 可大幅跳转。", "demoTap": "用手机？直接点按键就行。", "featuresTitle": "功能一览", "f1t": "按键和秒数，你说了算", "f1d": "→ / D 快进，← / A 快退，按住 Shift 跳得更远。时长可在 1 秒到 1 小时之间任意设置。", "f2t": "连按自动累加", "f2d": "连续按：+10、+20、+30…… 视频只跳转一次，中途不会重新加载。", "f3t": "在哪看视频都能用", "f3d": "YouTube、网课平台、新闻播放器、嵌入式视频，还有影院模式、迷你播放器和全屏。", "supportTitle": "支持 Skipurr", "supportDesc": "Skipurr 完全免费，无广告、不追踪。如果它帮你省了时间，留个评价或请杯咖啡，就是对我们最大的支持。", "rateBtn": "写个评价", "privacyLink": "隐私政策", "langLabel": "语言", "themeLabel": "切换浅色 / 深色", "footer": "用像素和耐心慢慢打磨。", "pitch": "让任意视频按你设定的秒数快进或快退。使用方向键或 A/D 键，配合 Shift 键可大幅跳转。", "coffee": "请我喝杯咖啡"}, "zh_TW": {"metaTitle": "Skipurr：影片快轉與倒轉 Chrome 擴充功能", "kicker": "免費 Chrome 擴充功能", "ctaAdd": "加到 Chrome", "ctaNote": "免費 · 免註冊 · 不追蹤", "demoTitle": "現在就試試看", "demoHint": "按 → 或 D 快轉，按 ← 或 A 倒轉。按住 Shift 可大幅跳轉。", "demoTap": "用手機嗎？直接點按鍵就行。", "featuresTitle": "功能介紹", "f1t": "按鍵和秒數，由你決定", "f1d": "→ / D 快轉，← / A 倒轉，按住 Shift 跳得更遠。秒數可在 1 秒到 1 小時之間自由設定。", "f2t": "連按自動累加", "f2d": "一直按：+10、+20、+30…… 影片只會跳轉一次，中間不會重新載入。", "f3t": "在哪看影片都能用", "f3d": "YouTube、線上課程網站、新聞播放器、嵌入式影片，還有劇院模式、迷你播放器和全螢幕。", "supportTitle": "支持 Skipurr", "supportDesc": "Skipurr 完全免費，沒有廣告也不追蹤。如果它幫你省下時間，留個評論或請杯咖啡，就是對我們最大的支持。", "rateBtn": "留下評論", "privacyLink": "隱私權政策", "langLabel": "語言", "themeLabel": "切換淺色 / 深色", "footer": "用像素和耐心慢慢打磨。", "pitch": "依照你設定的秒數，讓任何影片快轉或倒轉。使用方向鍵或 A/D 鍵，搭配 Shift 鍵可大幅跳轉。", "coffee": "請我喝杯咖啡"}, "ja": {"metaTitle": "Skipurr：動画の早送り・巻き戻し Chrome 拡張機能", "kicker": "無料の Chrome 拡張機能", "ctaAdd": "Chrome に追加", "ctaNote": "無料・登録不要・トラッキングなし", "demoTitle": "ここで試してみよう", "demoHint": "→ か D で早送り、← か A で巻き戻し。Shift を押しながらで大きくジャンプ。", "demoTap": "スマホならキーをタップ。", "featuresTitle": "できること", "f1t": "キーも秒数も自由自在", "f1d": "→ / D で早送り、← / A で巻き戻し、Shift でさらに大きくジャンプ。秒数は 1 秒〜1 時間で自由に設定。", "f2t": "連打でまとめてジャンプ", "f2d": "押すたびに +10、+20、+30… ジャンプは 1 回だけなので、途中で読み込み直しません。", "f3t": "いつもの動画でそのまま", "f3d": "YouTube、学習サイト、ニュースのプレーヤー、埋め込み動画、シアターモード、ミニプレーヤー、全画面にも対応。", "supportTitle": "Skipurr を応援する", "supportDesc": "Skipurr は無料で、広告もトラッキングもなし。時短になったら、レビューやコーヒーで応援してもらえるとうれしいです。", "rateBtn": "レビューを書く", "privacyLink": "プライバシーポリシー", "langLabel": "言語", "themeLabel": "ライト / ダーク切り替え", "footer": "ピクセルと根気でつくりました。", "pitch": "好きな秒数で、どんな動画も早送り・巻き戻し。矢印キーまたは A/D キー、Shift キーで大きくジャンプ。", "coffee": "コーヒーをおごる"}, "ko": {"metaTitle": "Skipurr: Chrome용 동영상 되감기 & 빨리 감기", "kicker": "무료 Chrome 확장 프로그램", "ctaAdd": "Chrome에 추가", "ctaNote": "무료 · 가입 불필요 · 추적 없음", "demoTitle": "여기서 바로 써 보세요", "demoHint": "→ 또는 D로 빨리 감기, ← 또는 A로 되감기. Shift를 누른 채로 크게 건너뛰어요.", "demoTap": "휴대폰이라면 키를 탭하세요.", "featuresTitle": "주요 기능", "f1t": "키도 초도 내 마음대로", "f1d": "→ / D는 빨리 감기, ← / A는 되감기, Shift는 더 크게 건너뛰기. 1초부터 1시간까지 원하는 대로 설정하세요.", "f2t": "누를수록 쌓여요", "f2d": "계속 누르면 +10, +20, +30… 이동은 한 번만 하니 중간에 다시 로드되지 않아요.", "f3t": "어디서 보든 OK", "f3d": "YouTube, 강의 사이트, 뉴스 플레이어, 삽입된 동영상, 영화관 모드, 미니 플레이어, 전체 화면까지.", "supportTitle": "Skipurr 응원하기", "supportDesc": "Skipurr는 광고도 추적도 없는 무료 확장 프로그램이에요. 시간을 아끼셨다면 리뷰나 커피 한 잔으로 응원해 주세요.", "rateBtn": "리뷰 남기기", "privacyLink": "개인정보처리방침", "langLabel": "언어", "themeLabel": "라이트 / 다크 전환", "footer": "픽셀과 인내로 만들었어요.", "pitch": "원하는 초만큼 모든 동영상을 되감거나 빨리 감으세요. 방향키 또는 A/D 키, Shift 키로 크게 건너뛰기.", "coffee": "커피 한 잔 사주기"}};
+const ARROW = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9'%3E%3Cpath d='M4 0h1v1h-1zM4 1h2v1h-2zM4 2h3v1h-3zM0 3h8v1h-8zM0 4h9v1h-9zM0 5h8v1h-8zM4 6h3v1h-3zM4 7h2v1h-2zM4 8h1v1h-1z'/%3E%3C/svg%3E\")";
+document.documentElement.style.setProperty('--arr', ARROW);
+const SUN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9'%3E%3Cpath d='M4 0h1v1h-1zM1 1h1v1h-1zM7 1h1v1h-1zM3 2h3v1h-3zM2 3h5v3h-5zM0 4h1v1h-1zM8 4h1v1h-1zM3 6h3v1h-3zM1 7h1v1h-1zM7 7h1v1h-1zM4 8h1v1h-1z'/%3E%3C/svg%3E\")";
+const MOON = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9'%3E%3Cpath d='M3 0h3v1h-3zM2 1h2v1h-2zM1 2h2v1h-2zM1 3h2v3h-2zM1 6h2v1h-2zM2 7h2v1h-2zM3 8h4v1h-4zM6 7h2v1h-2zM7 6h2v1h-2z'/%3E%3C/svg%3E\")";
+
+/* ---------- language ---------- */
+const NAMES = {en:'English',fr:'Français',es:'Español',pt_BR:'Português (Brasil)',de:'Deutsch',it:'Italiano',nl:'Nederlands',sv:'Svenska',no:'Norsk',da:'Dansk',pl:'Polski',tr:'Türkçe',ru:'Русский',vi:'Tiếng Việt',ar:'العربية',hi:'हिन्दी',zh_CN:'简体中文',zh_TW:'繁體中文',ja:'日本語',ko:'한국어'};
+const BCP = {pt_BR:'pt-BR',zh_CN:'zh-CN',zh_TW:'zh-TW',no:'nb'};
+const SCRIPT = {vi:'vt',tr:'vt',pl:'vt',ru:'ru',ar:'ar',hi:'hi',zh_CN:'zh-CN',zh_TW:'zh-TW',ja:'ja',ko:'ko'};
+const sel = document.getElementById('lang');
+for (const k of Object.keys(NAMES)) { if (!T[k]) continue; const o = document.createElement('option'); o.value = k; o.textContent = NAMES[k]; sel.appendChild(o); }
+function guess() {
+  const h = location.hash.slice(1); if (T[h]) return h;
+  try { const s = localStorage.getItem('skipurr-lang'); if (s && T[s]) return s; } catch (e) {}
+  for (const l of navigator.languages || [navigator.language || 'en']) {
+    const x = l.replace('-', '_'); if (T[x]) return x;
+    const b = l.split('-')[0].toLowerCase();
+    if (b === 'zh') return /TW|HK|MO|Hant/i.test(l) ? 'zh_TW' : 'zh_CN';
+    if (b === 'pt' && T.pt_BR) return 'pt_BR';
+    if ((b === 'nb' || b === 'nn') && T.no) return 'no';
+    if (T[b]) return b;
+  }
+  return 'en';
+}
+function apply(lc) {
+  const s = Object.assign({}, T.en, T[lc]);
+  const root = document.documentElement;
+  root.lang = BCP[lc] || lc; root.dir = lc === 'ar' ? 'rtl' : 'ltr';
+  if (SCRIPT[lc]) root.dataset.script = SCRIPT[lc]; else delete root.dataset.script;
+  document.querySelectorAll('[data-t]').forEach(el => { if (s[el.dataset.t] != null) el.textContent = s[el.dataset.t]; });
+  document.querySelectorAll('[data-t-aria]').forEach(el => { if (s[el.dataset.tAria] != null) el.setAttribute('aria-label', s[el.dataset.tAria]); });
+  document.title = s.metaTitle || 'Skipurr';
+  const md = document.querySelector('meta[name=description]'); if (md) md.content = s.pitch;
+  sel.value = lc;
+  try { localStorage.setItem('skipurr-lang', lc); } catch (e) {}
+}
+sel.addEventListener('change', () => { apply(sel.value); if (history.replaceState) history.replaceState(null, '', '#' + sel.value); });
+apply(guess());
+
+/* ---------- theme ---------- */
+const themeBtn = document.getElementById('theme');
+function isDark() { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; }
+function paintIcon() { themeBtn.querySelector('.theme-ico').style.setProperty('--ico', isDark() ? SUN : MOON); }
+try { const t = localStorage.getItem('skipurr-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+themeBtn.addEventListener('click', () => { const t = isDark() ? 'light' : 'dark'; document.documentElement.dataset.theme = t; try { localStorage.setItem('skipurr-theme', t); } catch (e) {} paintIcon(); });
+paintIcon();
+
+/* ---------- section dots ---------- */
+const dots = [...document.querySelectorAll('.dots a')];
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) dots.forEach(d => d.classList.toggle('on', d.dataset.sec === e.target.id)); }), { threshold: .5 });
+document.querySelectorAll('.level').forEach(s => io.observe(s));
+dots[0].classList.add('on');
+
+/* ---------- playable demo: a 10-minute pixel "video" you skip with the real keys ---------- */
+const cv = document.getElementById('scene'), g = cv.getContext('2d');
+const DUR = 600, STEP = 10, BIG = 30;
+let t = 42, last = performance.now();
+const PAL = [['#ffb7c5','#7850a0','#28144a'],['#ffd696','#f07864','#5a2850'],['#96dcff','#5a8ce6','#1e3278'],['#b4ffc8','#3caa8c','#14464f'],['#fff0a0','#ffa050','#8c3c3c'],['#dcbeff','#966ee6','#3c2882']];
+function lerp(a, b, k) { return a + (b - a) * k; }
+function hex(h) { return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); }
+function mix(a, b, k) { const x = hex(a), y = hex(b); return 'rgb(' + x.map((v, i) => Math.round(lerp(v, y[i], k))).join(',') + ')'; }
+function draw() {
+  const sc = Math.floor(t / 100) % PAL.length, [top, mid, bot] = PAL[sc];
+  for (let y = 0; y < 90; y += 2) { g.fillStyle = y < 54 ? mix(top, mid, y / 54) : mix(mid, bot, (y - 54) / 36); g.fillRect(0, y, 160, 2); }
+  const sx = Math.round((30 + (t % 100) * 1.4) % 190) - 15, sy = 22 + Math.round(5 * Math.sin(t * .6));
+  g.fillStyle = '#fffadc'; g.fillRect(sx - 7, sy - 9, 14, 18); g.fillRect(sx - 9, sy - 7, 18, 14);
+  g.fillStyle = '#fff';
+  for (let i = 0; i < 4; i++) { const cx = Math.round(((i * 55 - t * (4 + i)) % 200 + 200) % 200) - 20, cy = 9 + i * 8; g.fillRect(cx, cy, 18, 3); g.fillRect(cx + 4, cy - 3, 9, 3); }
+  [[8, 2, .3], [10, 5, .6], [12, 10, 1]].forEach(([amp, sp, k], layer) => {
+    g.fillStyle = mix(mid, bot, k); const base = 58 + layer * 10;
+    for (let x = 0; x < 160; x++) { const h = Math.round(amp * Math.sin((x + t * sp) / (10 + layer * 4) + sc) + amp * .5 * Math.sin((x + t * sp) / 5)); g.fillRect(x, base + h, 1, 90); }
+  });
+  const bx = 30 + Math.round(10 * Math.sin(t * .5)), by = 66 - Math.abs(Math.round(8 * Math.sin(t * 3)));
+  g.fillStyle = '#ff4081'; g.fillRect(bx, by, 8, 8); g.fillStyle = '#fff'; g.fillRect(bx + 1, by + 2, 2, 2); g.fillRect(bx + 5, by + 2, 2, 2);
+  const label = 'SCENE ' + String(Math.floor(t / 100) + 1).padStart(2, '0');
+  g.font = '8px "Press Start 2P", monospace'; g.textBaseline = 'top'; g.direction = 'ltr';
+  g.fillStyle = '#000'; g.fillRect(3, 3, Math.ceil(g.measureText(label).width) + 5, 12);
+  g.fillStyle = '#fff'; g.fillText(label, 5, 5);
+  document.getElementById('time').textContent = fmt(t) + ' / ' + fmt(DUR);
+  document.getElementById('prog').style.width = (t / DUR * 100) + '%';
+}
+function fmt(s) { s = Math.floor(s); const m = Math.floor(s / 60), r = s % 60; return m + ':' + String(r).padStart(2, '0'); }
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(now) { if (!reduce) t = (t + (now - last) / 1000) % DUR; last = now; draw(); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+
+const acc = { '1': 0, '-1': 0 }, hideT = {};
+const osd = { '1': document.getElementById('osdR'), '-1': document.getElementById('osdL') };
+function skip(dir, big) {
+  const n = big ? BIG : STEP; t = Math.min(DUR - 1, Math.max(0, t + dir * n)); draw();
+  const k = String(dir), o = String(-dir);
+  acc[o] = 0; osd[o].classList.remove('on'); clearTimeout(hideT[k]);
+  acc[k] += n; const s = acc[k];
+  osd[k].querySelector('span').textContent = (dir > 0 ? '+' : '-') + (s < 60 ? s + 's' : fmt(s));
+  osd[k].classList.add('on');
+  hideT[k] = setTimeout(() => { osd[k].classList.remove('on'); acc[k] = 0; }, 900);
+}
+const keyBtns = [...document.querySelectorAll('.key[data-dir]')];
+const shiftBtn = document.getElementById('shiftKey');
+let shiftLatched = false;
+shiftBtn.addEventListener('click', () => { shiftLatched = !shiftLatched; shiftBtn.classList.toggle('down', shiftLatched); shiftBtn.setAttribute('aria-pressed', shiftLatched); });
+keyBtns.forEach(b => b.addEventListener('click', () => skip(Number(b.dataset.dir), shiftLatched)));
+function flash(i) { const b = keyBtns[i]; b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 120); }
+addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return;
+  const k = e.key.toLowerCase(); let dir = 0, i = -1;
+  if (e.key === 'ArrowRight') { dir = 1; i = 1; } else if (e.key === 'ArrowLeft') { dir = -1; i = 0; }
+  else if (k === 'd') { dir = 1; i = 3; } else if (k === 'a') { dir = -1; i = 2; }
+  if (e.key === 'Shift') shiftBtn.classList.add('down');
+  if (!dir) return;
+  e.preventDefault(); flash(i); skip(dir, e.shiftKey);
+});
+addEventListener('keyup', e => { if (e.key === 'Shift' && !shiftLatched) shiftBtn.classList.remove('down'); });
+</script>
+
+</body>
+</html>

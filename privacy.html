@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Skipurr Privacy Policy</title>
+<link rel="icon" type="image/png" href="icon.png">
+<style>
+:root{--paper:#fce4ec;--grid:#f6cddc;--panel:#fff3f8;--line:#ff80ab;--hot:#ff4081;--ink:#3a2a33;--muted:#7a6470}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#1b1220;--grid:#2a1b30;--panel:#261a2c;--line:#c14a82;--hot:#ff5c96;--ink:#f7e9f0;--muted:#c3abb9;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#1b1220;--grid:#2a1b30;--panel:#261a2c;--line:#c14a82;--hot:#ff5c96;--ink:#f7e9f0;--muted:#c3abb9;color-scheme:dark}
+@font-face{font-family:'Press Start 2P';src:url('fonts/PressStart2P.woff2') format('woff2');font-display:swap}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:32px 32px}
+main{max-width:760px;margin:0 auto;padding-block:48px 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.sheet{background:var(--panel);border:4px solid var(--line);box-shadow:8px 8px 0 var(--hot);border-radius:12px;padding:36px clamp(18px,5vw,48px)}
+a{color:var(--hot)}
+.back{font-family:'Press Start 2P',monospace;font-size:11px;text-decoration:none;display:inline-block;margin-bottom:24px}
+h1{font-family:'Press Start 2P',monospace;font-size:clamp(18px,4vw,24px);line-height:1.5;color:var(--hot);margin:0 0 6px;text-wrap:balance}
+h2{font-family:'Press Start 2P',monospace;font-size:13px;line-height:1.6;color:var(--hot);margin:32px 0 10px}
+.date{color:var(--muted);margin:0 0 24px}
+.lead{font-weight:600}
+ul{padding-left:1.2em}li{margin:.4em 0}
+code{font-size:.92em;background:var(--paper);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← Skipurr</a>
+  <div class="sheet">
+    <h1>Privacy policy</h1>
+    <p class="date">Skipurr: Video Rewind &amp; Fast-Forward · Last updated 31 October 2026</p>
+    <p class="lead">The extension does not collect, transmit or sell any personal data, browsing history or page content. It has no analytics, no tracking and no remote code.</p>
+
+    <h2>What it stores</h2>
+    <p>Stored with Chrome's storage, and synced across your own Chrome profile by Chrome sync if you have it on:</p>
+    <ul>
+      <li>Your skip durations, overlay on/off, and the list of sites you turned it off on.</li>
+      <li>A local counter of how many times you've used the shortcut, and the dates (no times, no sites) of the last few days you used it. It never leaves your device. It is only used to decide when to show a one-time "Rate us" button.</li>
+    </ul>
+
+    <h2>What it accesses, and why</h2>
+    <ul>
+      <li><strong>Web pages (all sites):</strong> a script runs on pages to find <code>&lt;video&gt;</code> elements and change their playback position when you press a skip key (arrow keys, or A / D). It does not read, record or send page content, form data or what you type. Key presses are only checked to detect the skip keys, and are ignored in text fields.</li>
+      <li><strong>Tabs that are already open (scripting):</strong> when the extension is installed or updated, it loads that same script into tabs you already have open, so they work without a refresh. Nothing is read from those tabs.</li>
+    </ul>
+
+    <h2>Third parties</h2>
+    <p>None. The extension does not contact any server and loads no external fonts, scripts or images.</p>
+
+    <h2>Uninstall page</h2>
+    <p>When you uninstall, Chrome opens an optional feedback form (forms.fillout.com) in a new tab. Nothing about you is passed to it by the extension.</p>
+
+    <h2>This website</h2>
+    <p>This site has no analytics, ads or cookies. It remembers your chosen language and light/dark theme in your own browser only. Like any website, the hosting provider may keep standard server logs.</p>
+
+    <h2>Contact</h2>
+    <p>videoskipper69@gmail.com</p>
+  </div>
+</main>
+</body>
+</html>
