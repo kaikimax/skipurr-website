@@ -30,19 +30,20 @@ code{font-size:.92em;background:var(--paper);padding:1px 5px;border-radius:4px}
   <a class="back" href="index.html">← Skipurr</a>
   <div class="sheet">
     <h1>Privacy policy</h1>
-    <p class="date">Skipurr: Video Rewind &amp; Fast-Forward · Last updated 1 November 2026</p>
+    <p class="date">Skipurr: Video Rewind, Fast-Forward &amp; Pause · Last updated 4 November 2026</p>
     <p class="lead">The extension does not collect, transmit or sell any personal data, browsing history or page content. It has no analytics, no tracking and no remote code.</p>
 
     <h2>What it stores</h2>
     <p>Stored with Chrome's storage, and synced across your own Chrome profile by Chrome sync if you have it on:</p>
     <ul>
-      <li>Your skip durations, overlay on/off, and the list of sites you turned it off on.</li>
+      <li>Your skip durations, your on/off switches (overlay, seconds on the icon, A / D keys, Space to pause), and the list of sites you turned it off on.</li>
       <li>A local counter of how many times you've used the shortcut, and the dates (no times, no sites) of the last few days you used it. It never leaves your device. It is only used to decide when to show a one-time "Rate us" button.</li>
     </ul>
 
     <h2>What it accesses, and why</h2>
     <ul>
-      <li><strong>Web pages (all sites):</strong> a script runs on pages to find <code>&lt;video&gt;</code> elements and change their playback position when you press a skip key (arrow keys, or A / D). It does not read, record or send page content, form data or what you type. Key presses are only checked to detect the skip keys, and are ignored in text fields.</li>
+      <li><strong>Web pages (all sites):</strong> a script runs on pages to find <code>&lt;video&gt;</code> elements and change their playback position, or pause and play them, when you press a skip key (arrow keys, or A / D) or Space. It does not read, record or send page content, form data or what you type. Key presses are only checked to detect those keys, and are ignored in text fields.</li>
+      <li><strong>Players inside frames:</strong> when a video sits in a frame (an embedded player), the parts of the extension running in the page and in that frame tell each other only whether a video is there and whether it's on screen, so your key reaches the right player. This stays inside your browser.</li>
       <li><strong>Tabs that are already open (scripting):</strong> when the extension is installed or updated, it loads that same script into tabs you already have open, so they work without a refresh. Nothing is read from those tabs.</li>
     </ul>
 
@@ -50,7 +51,7 @@ code{font-size:.92em;background:var(--paper);padding:1px 5px;border-radius:4px}
     <p>None. The extension does not contact any server and loads no external fonts, scripts or images.</p>
 
     <h2>Uninstall page</h2>
-    <p>When you uninstall, Chrome opens an optional feedback form (forms.fillout.com) in a new tab. The form's link includes only the extension's version number and your browser's language (for example <code>?v=2.0.0&amp;lang=en</code>), so feedback can be matched to the right version. Nothing else about you is passed to it.</p>
+    <p>When you uninstall, Chrome opens an optional feedback form (forms.fillout.com) in a new tab. The form's link includes only the extension's version number and your browser's language (for example <code>?v=2.4.0&amp;lang=en</code>), so feedback can be matched to the right version. Nothing else about you is passed to it.</p>
 
     <h2>This website</h2>
     <p>This site has no analytics, ads or cookies. It remembers your chosen language and light/dark theme in your own browser only. Like any website, the hosting provider may keep standard server logs.</p>
